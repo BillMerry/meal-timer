@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Meal Timing Coordinator</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#1F2937">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app">
+    <!-- Header ONLY on Dishes page (hidden on Timeline via JS) -->
+    <header id="header" class="header">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">🍽️</div>
+        <div>
+          <div class="title">Meal Timing Coordinator</div>
+          <div class="subtitle">Plan on <b>Dishes</b>, cook on <b>Timeline</b>.</div>
+        </div>
+      </div>
+
+      <section class="mealbar" aria-label="Meal management">
+        <label class="field">
+          <span class="label">Meal</span>
+          <select id="mealSelect"></select>
+        </label>
+
+        <div class="row">
+          <button class="btn" id="newMealBtn">Create new meal</button>
+          <button class="btn" id="copyMealBtn">Copy meal</button>
+          <button class="btn danger" id="deleteMealBtn">Delete</button>
+        </div>
+      </section>
+    </header>
+
+    <nav class="tabs" aria-label="Tabs">
+      <button class="tab active" data-tab="dishes" id="tabDishes">Dishes</button>
+      <button class="tab" data-tab="timeline" id="tabTimeline">Timeline</button>
+    </nav>
+
+    <section id="pageDishes" class="page">
+      <div class="panel">
+        <div class="panelHeader">
+          <h2>Serve time</h2>
+          <div class="muted">Pick when you want to plate up.</div>
+        </div>
+        <div class="serveRow">
+          <label class="field">
+            <span class="label">Serve at</span>
+            <input id="serveTime" type="time" />
+          </label>
+          <label class="field">
+            <span class="label">Date</span>
+            <input id="serveDate" type="date" />
+          </label>
+          <button class="btn primary" id="recalcBtn" title="Recalculate timeline">Recalculate</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panelHeader">
+          <h2>Dishes</h2>
+          <div class="muted">Each dish has stages with durations. Stages run in order.</div>
+        </div>
+
+        <div class="dishList" id="dishList"></div>
+
+        <div class="row">
+          <button class="btn" id="addDishBtn">Add dish</button>
+          <div class="spacer"></div>
+          <button class="btn" id="exportBtn" title="Export the current meal as JSON">Export JSON</button>
+          <button class="btn" id="importBtn" title="Import a meal JSON">Import JSON</button>
+        </div>
+      </div>
+
+      <div class="panel subtle">
+        <div class="panelHeader">
+          <h2>Roast Beef Dinner template</h2>
+          <div class="muted">Already loaded as your starter meal (yes, including Yorkshires — without asking 😄).</div>
+        </div>
+        <ul class="bullets">
+          <li>Edit durations to match your kit (oven speed, joint size, parboil time, etc.).</li>
+          <li>Switch to <b>Timeline</b> when you start cooking. Keep the iPad awake for alerts.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="pageTimeline" class="page hidden">
+      <div class="timelineTop">
+        <div class="left">
+          <div class="big">Timeline</div>
+          <div class="muted" id="timelineMeta">—</div>
+        </div>
+        <div class="right">
+          <button class="btn" id="enableSoundBtn">Enable sound</button>
+          <button class="btn primary" id="startSessionBtn">Start cooking session</button>
+          <button class="btn" id="stopSessionBtn" disabled>Stop</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panelHeader">
+          <h2>Chronological actions</h2>
+          <div class="muted">You'll get a popup + sound at start/end of every stage.</div>
+        </div>
+
+        <div class="timelineControls">
+          <label class="field">
+            <span class="label">View</span>
+            <select id="timelineFilter">
+              <option value="all">All</option>
+              <option value="upcoming">Upcoming</option>
+              <option value="done">Done</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="label">Show</span>
+            <select id="timelineGranularity">
+              <option value="both">Start + End</option>
+              <option value="start">Start only</option>
+              <option value="end">End only</option>
+            </select>
+          </label>
+          <div class="spacer"></div>
+          <button class="btn" id="scrollNowBtn">Jump to now</button>
+        </div>
+
+        <div class="timeline" id="timeline"></div>
+      </div>
+
+      <div class="panel subtle">
+        <div class="panelHeader">
+          <h2>Tips</h2>
+          <div class="muted">iPad Safari likes a user tap before audio plays.</div>
+        </div>
+        <ul class="bullets">
+          <li>Tap <b>Enable sound</b> once at the start.</li>
+          <li>Keep the screen awake (Settings → Display & Brightness → Auto-Lock).</li>
+        </ul>
+      </div>
+    </section>
+
+    <div id="toast" class="toast hidden" role="alertdialog" aria-live="assertive" aria-modal="true">
+      <div class="toastCard">
+        <div class="toastTitle" id="toastTitle">Alert</div>
+        <div class="toastBody" id="toastBody">—</div>
+        <div class="toastActions">
+          <button class="btn primary" id="toastOkBtn">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <dialog id="jsonDialog" class="dialog">
+      <form method="dialog">
+        <div class="dialogHeader">
+          <div class="dialogTitle" id="jsonDialogTitle">JSON</div>
+          <button class="iconBtn" value="cancel" aria-label="Close">✕</button>
+        </div>
+        <textarea id="jsonText" class="jsonText" spellcheck="false"></textarea>
+        <div class="row">
+          <div class="spacer"></div>
+          <button class="btn" id="jsonActionBtn" value="ok">OK</button>
+        </div>
+      </form>
+    </dialog>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
