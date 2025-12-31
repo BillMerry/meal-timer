@@ -2,6 +2,7 @@
    Designed for iPad use. */
 
 const STORAGE_KEY = "cooktiming.meals.v1";
+const APP_VERSION = "v0.1.1";
 const ACTIVE_KEY  = "cooktiming.activeMealId.v1";
 const SESSION_KEY = "cooktiming.session.v1"; // active cooking session state
 
@@ -381,6 +382,10 @@ function renderDishes(){
     const actions = document.createElement("div");
     actions.className = "dishActions";
     actions.innerHTML = `
+      <div class="dishMove">
+        <button class="miniBtn" title="Move dish up" data-action="moveDishUp" data-dish="${dish.id}">▲</button>
+        <button class="miniBtn" title="Move dish down" data-action="moveDishDown" data-dish="${dish.id}">▼</button>
+      </div>
       <button class="btn" data-action="addStage" data-dish="${dish.id}">Add stage</button>
       <button class="btn danger" data-action="deleteDish" data-dish="${dish.id}">Delete dish</button>
     `;
@@ -397,7 +402,7 @@ function renderDishes(){
           <th style="width:12%;">Mins</th>
           <th style="width:30%;">Notes</th>
           <th style="width:18%;">Alerts</th>
-          <th style="width:8%; text-align:right;"> </th>
+          <th style="width:12%; text-align:right;"> </th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -414,7 +419,9 @@ function renderDishes(){
           <label class="checkbox"><input type="checkbox" ${stage.alertStart ? "checked":""} data-stage="${stage.id}" data-dish="${dish.id}" data-field="alertStart">Start</label>
           <label class="checkbox"><input type="checkbox" ${stage.alertEnd ? "checked":""} data-stage="${stage.id}" data-dish="${dish.id}" data-field="alertEnd">End</label>
         </td>
-        <td style="text-align:right;">
+        <td style="text-align:right; white-space:nowrap;">
+          <button class="miniBtn" title="Move stage up" data-action="moveStageUp" data-dish="${dish.id}" data-stage="${stage.id}">▲</button>
+          <button class="miniBtn" title="Move stage down" data-action="moveStageDown" data-dish="${dish.id}" data-stage="${stage.id}">▼</button>
           <button class="btn danger" data-action="deleteStage" data-dish="${dish.id}" data-stage="${stage.id}">Del</button>
         </td>
       `;
@@ -458,6 +465,35 @@ function deleteStage(dishId, stageId){
   const dish = (meal.dishes || []).find(d => d.id === dishId);
   if (!dish) return;
   dish.stages = (dish.stages || []).filter(s => s.id !== stageId);
+  upsertMeal(meal);
+  renderDishes();
+}
+
+
+function moveDish(dishId, dir){
+  const arr = meal.dishes || [];
+  const idx = arr.findIndex(d => d.id === dishId);
+  if (idx < 0) return;
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= arr.length) return;
+  const [item] = arr.splice(idx, 1);
+  arr.splice(newIdx, 0, item);
+  meal.dishes = arr;
+  upsertMeal(meal);
+  renderDishes();
+}
+
+function moveStage(dishId, stageId, dir){
+  const dish = (meal.dishes || []).find(d => d.id === dishId);
+  if (!dish) return;
+  const arr = dish.stages || [];
+  const idx = arr.findIndex(s => s.id === stageId);
+  if (idx < 0) return;
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= arr.length) return;
+  const [item] = arr.splice(idx, 1);
+  arr.splice(newIdx, 0, item);
+  dish.stages = arr;
   upsertMeal(meal);
   renderDishes();
 }
@@ -519,6 +555,10 @@ function wireDishHandlers(){
       const dishId = btn.dataset.dish;
       if (action === "addStage") addStage(dishId);
       if (action === "deleteDish") deleteDish(dishId);
+      if (action === "moveDishUp") moveDish(dishId, -1);
+      if (action === "moveDishDown") moveDish(dishId, 1);
+      if (action === "moveStageUp") moveStage(dishId, btn.dataset.stage, -1);
+      if (action === "moveStageDown") moveStage(dishId, btn.dataset.stage, 1);
       if (action === "deleteStage") deleteStage(dishId, btn.dataset.stage);
     };
   });
@@ -762,6 +802,9 @@ function escapeHtml(str){
 // ---------- App bootstrap ----------
 function init(){
   ensureBootstrap();
+
+  const v = $("#versionLabel");
+  if (v) v.textContent = `Meal Timer ${APP_VERSION}`;
 
   // PWA optional SW
   if ("serviceWorker" in navigator){

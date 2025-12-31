@@ -1,5 +1,5 @@
 // Simple cache-first service worker (optional).
-const CACHE = "mealtimer-v1";
+const CACHE = "mealtimer-v0.1.1";
 const ASSETS = [
   "./",
   "./index.html",
